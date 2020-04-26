@@ -61,6 +61,7 @@ RUN ./configure \
   --disable-debug \
   --disable-doc \
   --enable-static \
+  --enable-shared \
   --enable-openssl \
   --enable-version3 \
   --enable-pthreads \
