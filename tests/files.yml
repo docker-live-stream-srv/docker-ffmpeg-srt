@@ -1,0 +1,12 @@
+---
+schemaVersion: '2.0.0'
+fileExistenceTests:
+  - name: ffmpeg
+    path: /opt/ffmpeg/bin/ffmpeg
+    shouldExist: true
+    permissions: '-rwxr-xr-x'
+
+  - name: ffprobe
+    path: /opt/ffmpeg/bin/ffprobe
+    shouldExist: true
+    permissions: '-rwxr-xr-x'
