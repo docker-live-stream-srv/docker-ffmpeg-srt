@@ -1,0 +1,33 @@
+language: bash
+services: docker
+
+env:
+  global:
+    - IMAGE=livestreamsrv/ffmpeg-srt
+  matrix:
+    - VERSION=4.2.2 EXTRA_TAGS="latest"
+
+install:
+  # Pull hadolint tool to check Dockerfile
+  - docker pull hadolint/hadolint
+  # Install test tool https://github.com/GoogleContainerTools/container-structure-test
+  - >
+    curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 
+    && chmod +x container-structure-test-linux-amd64 
+    && sudo mv container-structure-test-linux-amd64 /usr/local/bin/container-structure-test
+
+before_script:
+  - hooks/lint.sh
+  - hooks/build.sh
+
+script:  
+  - hooks/test.sh
+
+after_script:
+  - docker images
+
+deploy:
+  provider: script
+  script: hooks/push.sh
+  on:
+    branch: master
