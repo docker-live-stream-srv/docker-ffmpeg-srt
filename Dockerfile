@@ -6,7 +6,7 @@ FROM livestreamsrv/srt:${SRT_VERSION} as srt
 FROM alpine:3.11 as build
 
 ARG VERSION=4.2.2
-ENV FFMPEG_DOWNLOAD_URL=http://ffmpeg.org/releases/ffmpeg-${VERSION}.tar.gz
+ENV FFMPEG_DOWNLOAD_URL=https://ffmpeg.org/releases/ffmpeg-${VERSION}.tar.gz
 
 ENV PREFIX=/opt/ffmpeg
 ENV LD_LIBRARY_PATH=${PREFIX}/lib

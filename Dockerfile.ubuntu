@@ -1,0 +1,59 @@
+###############################
+# Build image
+###############################
+ARG SRT_VERSION=latest
+FROM livestreamsrv/srt:ubuntu-${SRT_VERSION} as srt
+FROM ubuntu:20.04 as build
+
+ARG VERSION=v4.2.2
+ARG DOWNLOAD_URL=http://ffmpeg.org/releases/ffmpeg-${VERSION}.tar.gz
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PREFIX=/opt/ffmpeg
+ENV LD_LIBRARY_PATH=${PREFIX}/lib
+ENV PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig
+ENV MAKEFLAGS="-j8"
+
+COPY --from=srt /opt/srt/lib /opt/ffmpeg/lib
+COPY --from=srt /opt/srt/include /opt/ffmpeg/include
+
+# Build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  bash \
+  build-essential \
+  coreutils \
+  curl \
+  wget \
+  ca-certificates \
+  gcc \
+  cmake
+
+COPY ./compile_libs.sh /tmp/compile_libs.sh
+RUN chmod +x /tmp/compile_libs.sh && \
+    /tmp/compile_libs.sh
+
+COPY ./compile_ffmpeg.sh /tmp/compile_ffmpeg.sh
+RUN chmod +x /tmp/compile_ffmpeg.sh && \
+    /tmp/compile_ffmpeg.sh
+
+###############################
+# Release image
+###############################
+FROM ubuntu:20.04
+
+ARG VCS_REF=""
+ARG VCS_URL=""
+LABEL org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url=$VCS_URL
+
+ENV PREFIX=/opt/ffmpeg
+ENV PATH=$PREFIX/bin:$PATH
+ENV LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  bash \
+  ca-certificates && \
+  rm -r /var/lib/apt/lists/*
+
+COPY --from=build /opt/ffmpeg /opt/ffmpeg
+
+CMD ["bash"]

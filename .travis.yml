@@ -3,9 +3,12 @@ services: docker
 
 env:
   global:
+    - VCS_URL=https://git.ffmpeg.org/ffmpeg
     - IMAGE=livestreamsrv/ffmpeg-srt
   matrix:
-    - VERSION=4.2.2 EXTRA_TAGS="latest"
+    - BASE_IMAGE="alpine" SRT_VERSION=latest VERSION=4.2.2 EXTRA_TAGS="4.2;4;latest"
+    - BASE_IMAGE="debian" SRT_VERSION=latest VERSION=4.2.2 EXTRA_TAGS="4.2;4;latest"
+    - BASE_IMAGE="ubuntu" SRT_VERSION=latest VERSION=4.2.2 EXTRA_TAGS="4.2;4;latest"
 
 install:
   # Pull hadolint tool to check Dockerfile
