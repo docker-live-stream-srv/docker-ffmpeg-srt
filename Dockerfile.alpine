@@ -20,6 +20,7 @@ RUN apk add --no-cache \
     bash \
     build-base \
     coreutils \
+    libarchive-tools \
     ca-certificates \
     wget \
     gcc \
