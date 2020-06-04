@@ -7,6 +7,7 @@ set -o pipefail         # Use last non-zero exit code in a pipeline
 #set -o xtrace          # Trace the execution of the script (debug)
 
 LIBS_BUILD_DIR="${PREFIX}/libs-build"
+PREFIX_SED=$(echo "$PREFIX" | awk '{gsub(/\//, "\\/"); print}')
 export LD_LIBRARY_PATH=${PREFIX}/lib
 export PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig
 export MAKEFLAGS="-j8"
@@ -22,9 +23,10 @@ LIB_OPUS_VERSION="1.3.1"
 LIB_FDK_ACC_VERSION="2.0.1"
 LIB_FREETYPE_VERSION="2.10.1"
 LIB_FRIBIDI_VERSION="1.0.9"
+LIB_HARFBUZZ_VERSION="2.6.4"
 LIB_ASS_VERSION="0.14.0"
 LIB_WEBP_VERSION="1.1.0"
-LIB_RTMP_VERSION="2.3"
+LIB_RTMP_MODIFIED_VERSION="master"
 LIB_SOXR_VERSION="0.1.3"
 LIB_SPEEX_VERSION="1.2.0"
 LIB_VIDSTAB_VERSION="1.1.0"
@@ -73,9 +75,15 @@ compile() {
 
     if [ -n "${compile_cmd}" ]; then
         echo "****** Compiling '${name}' ******"
+        echo "Entering dir: '${workdir}'"
         cd "${workdir}"
-        eval "$compile_cmd"
-        echo "Ok. '${name}' compiled."
+        
+        if eval "$compile_cmd"; then
+            echo "Ok. '${name}' compiled."
+        else
+            echo "ERROR when compiling '${name}'."
+            exit 1
+        fi
     fi
 }
 
@@ -125,32 +133,47 @@ build   "fdk-aac"  "https://github.com/mstorsjo/fdk-aac/archive/v${LIB_FDK_ACC_V
 
 # freetype - libass dep
 build   "freetype" "https://download.savannah.gnu.org/releases/freetype/freetype-${LIB_FREETYPE_VERSION}.tar.xz" \
-        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared && make && make install'
+        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared --without-harfbuzz && make && make install'
 
 # fribidi - libass dep
 build   "fribidi"  "https://github.com/fribidi/fribidi/archive/v${LIB_FRIBIDI_VERSION}.tar.gz" \
-        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared --enable-static --disable-docs && make && make install'
+        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared --enable-static --disable-docs && MAKEFLAGS="-j1" make && make install'
 
 # harfbuzz - libass dep
+build   "harfbuzz" "https://www.freedesktop.org/software/harfbuzz/release/harfbuzz-${LIB_HARFBUZZ_VERSION}.tar.xz" \
+        './configure --prefix="$PREFIX" --disable-shared --enable-static && make && make install'
 
 # ass
 build   "ass"      "https://github.com/libass/libass/archive/${LIB_ASS_VERSION}.tar.gz" \
         './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared && make && make install'
 
 # webp
-build   "webp"     "https://github.com/webmproject/libwebp/archive/v${LIB_WEBP_VERSION}.tar.gz"
+build   "webp"     "https://github.com/webmproject/libwebp/archive/v${LIB_WEBP_VERSION}.tar.gz" \
+        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared && make && make install'
 
 # rtmp
-build   "rtmp"     "https://rtmpdump.mplayerhq.hu/download/rtmpdump-${LIB_RTMP_VERSION}.tgz"
+build   "rtmp"     "https://github.com/JudgeZarbi/RTMPDump-OpenSSL-1.1/archive/${LIB_RTMP_MODIFIED_VERSION}.tar.gz" \
+        "sed -i '/INC=.*/d' ./Makefile && \
+         sed -i 's/prefix=.*/prefix=${PREFIX_SED}\nINC=-I\$(prefix)\/include/' ./Makefile && \
+         sed -i 's/SHARED=.*/SHARED=no/' ./Makefile && \
+         make && DESTDIR='${PREFIX}' make install
+        "
 
 # soxr
-build   "soxr"     "https://downloads.sourceforge.net/project/soxr/soxr-${LIB_SOXR_VERSION}-Source.tar.xz"
+build   "soxr"     "https://downloads.sourceforge.net/project/soxr/soxr-${LIB_SOXR_VERSION}-Source.tar.xz" \
+        'cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED_LIBS:bool=off -DWITH_OPENMP:bool=off -DBUILD_TESTS:bool=off && make && make install'
 
 # speex
-build   "speex"    "https://github.com/xiph/speex/archive/Speex-${LIB_SPEEX_VERSION}.tar.gz"
+build   "speex"    "https://github.com/xiph/speex/archive/Speex-${LIB_SPEEX_VERSION}.tar.gz" \
+        './autogen.sh && ./configure --prefix="$PREFIX" --disable-shared && make && make install'
 
 # vidstab
-build   "vidstab"  "https://github.com/georgmartius/vid.stab/archive/v${LIB_VIDSTAB_VERSION}.tar.gz"
+build   "vidstab"  "https://github.com/georgmartius/vid.stab/archive/v${LIB_VIDSTAB_VERSION}.tar.gz" \
+        'sed -i "s/vidstab SHARED/vidstab STATIC/" ./CMakeLists.txt && \
+         cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$PREFIX" && \
+         make && make install
+        '
 
 # snappy
-build   "snappy"   "https://github.com/google/snappy/archive/${LIB_SNAPPY_VERSION}.tar.gz"
+build   "snappy"   "https://github.com/google/snappy/archive/${LIB_SNAPPY_VERSION}.tar.gz" \
+        'cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED_LIBS:bool=off && make && make install'
