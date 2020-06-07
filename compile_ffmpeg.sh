@@ -6,30 +6,35 @@ set -o nounset          # Disallow expansion of unset variables
 set -o pipefail         # Use last non-zero exit code in a pipeline
 #set -o xtrace          # Trace the execution of the script (debug)
 
-# Download ffmpeg source
-mkdir -p /tmp/ffmpeg
-echo "Downloading '$DOWNLOAD_URL' ..."
-wget -qO- $DOWNLOAD_URL | tar -xvz -C /tmp/ffmpeg --strip-components=1
+: "${DOWNLOAD_URL:?Please set DOWNLOAD_URL env variable.}"
+
+source ./compile_common.sh
+
+name="ffmpeg"
+workdir=`getWorkdir "${name}" "${DOWNLOAD_URL}"`
+
+# Download
+download "${name}" "${DOWNLOAD_URL}" "${workdir}"
 
 # Switch to build dir
-cd /tmp/ffmpeg
+cd "${workdir}"
 
 # Compile ffmpeg
 ./configure \
   --disable-debug \
   --disable-doc \
-  ###
+  \
   --disable-shared \
   --enable-static \
-  ###
+  \
   --enable-pic \
   --enable-small \
   --enable-ffplay \
-  ###
+  \
   --enable-gpl \
   --enable-version3 \
   --enable-nonfree \
-  ###
+  \
   --enable-fontconfig \
   --enable-frei0r \
   --enable-pthreads \
@@ -38,11 +43,9 @@ cd /tmp/ffmpeg
   --enable-postproc \
   --enable-avresample \
   --enable-filters  \
-  ###
+  \
   --enable-openssl \
   --enable-libmp3lame \
-  --enable-libopencore-amrnb \
-  --enable-libopencore-amrwb \
   --enable-libopenjpeg \
   --enable-libx264 \
   --enable-libx265 \
@@ -67,7 +70,7 @@ cd /tmp/ffmpeg
   --pkg-config-flags="--static" \
   --extra-cflags="-I${PREFIX}/include -static" \
   --extra-ldflags="-L${PREFIX}/lib -static" \
-  --extra-libs="-lpthread -lm" \
+  --extra-libs="-lpthread -lm -ldl" \
   --prefix="${PREFIX}" \
   || (cat ffbuild/config.log && false)
 make && make install && make distclean
